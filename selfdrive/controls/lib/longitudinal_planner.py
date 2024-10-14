@@ -108,14 +108,11 @@ class LongitudinalPlanner:
     return x, v, a, j, throttle_prob
 
   def update(self, sm):
-    if sm['controlsState'].experimentalMode:
+    if sm['selfdriveState'].experimentalMode:
       self.dynamic_experimental_controller.update(sm['carState'], sm['radarState'].leadOne, sm['modelV2'])
       self.mpc.mode = self.dynamic_experimental_controller.get_mpc_mode()
     else:
-      self.mpc.mode = 'blended' if sm['controlsState'].experimentalMode else 'acc'
-
-    
-    self.mpc.mode = 'blended' if sm['selfdriveState'].experimentalMode else 'acc'
+      self.mpc.mode = 'blended' if sm['selfdriveState'].experimentalMode else 'acc'
 
     if len(sm['carControl'].orientationNED) == 3:
       accel_coast = get_coast_accel(sm['carControl'].orientationNED[1])
