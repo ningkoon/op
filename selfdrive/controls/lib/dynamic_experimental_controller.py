@@ -109,7 +109,7 @@ class WeightedMovingAverageCalculator:
 
 class DynamicExperimentalController:
   def __init__(self):
-    self._is_enabled = False
+    self._is_enabled = True
     self._mode = 'acc'
     self._mode_prev = 'acc'
     self._mode_changed = False
@@ -191,7 +191,7 @@ class DynamicExperimentalController:
       return LEAD_PROB + 0.1  # Increase the threshold on highways
     return LEAD_PROB
 
-  def _update(self, car_state, lead_one, md, controls_state, maneuver_distance):
+  def _update(self, car_state, lead_one, md):
     self._v_ego_kph = car_state.vEgo * 3.6
     self._v_cruise_kph = car_state.vCruise
     self._has_lead = lead_one.status
@@ -328,55 +328,11 @@ class DynamicExperimentalController:
     self._set_mode('acc')
     self._set_blend_type(0)
 
-  def _radar_mode(self):
-    # when mpc fcw crash prob is high
-    # use blended to slow down quickly
-    if self._has_mpc_fcw:
-      self._set_mode('blended')
-      return
-
-    # If there is a filtered lead, the vehicle is not in standstill, and the lead vehicle's yRel meets the condition,
-    if self._has_lead_filtered and not self._has_standstill:
-      self._set_mode('acc')
-      return
-
-    # when blinker is on and speed is driving below V_ACC_MIN: blended
-    # we dont want it to switch mode at higher speed, blended may trigger hard brake
-    #if self._has_blinkers and self._v_ego_kph < V_ACC_MIN:
-    #  self._set_mode('blended')
-    #  return
-
-    # when standstill: blended
-    # in case of lead car suddenly move away under traffic light, acc mode won't brake at traffic light.
-    if self._has_standstill:
-      self._set_mode('blended')
-      return
-
-    # when detecting slow down scenario: blended
-    # e.g. traffic light, curve, stop sign etc.
-    if self._has_slow_down:
-      self._set_mode('blended')
-      return
-
-    # car driving at speed lower than set speed: acc
-    if self._has_slowness:
-      self._set_mode('acc')
-      return
-
-    # Nav enabled and distance to upcoming turning is 300 or below
-    if self._has_nav_instruction:
-      self._set_mode('blended')
-      return
-
-    self._set_mode('acc')
-
-  def update(self, radar_unavailable, car_state, lead_one, md, controls_state, maneuver_distance):
+  
+  def update(self, car_state, lead_one, md):
     if self._is_enabled:
-      self._update(car_state, lead_one, md, controls_state, maneuver_distance)
-      if radar_unavailable:
-        self._radarless_mode()
-      else:
-        self._radar_mode()
+      self._update(car_state, lead_one, md)
+    self._radarless_mode()
     self._mode_changed = self._mode != self._mode_prev
     self._mode_prev = self._mode
 
