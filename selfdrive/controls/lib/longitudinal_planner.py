@@ -15,6 +15,7 @@ from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import T_IDX
 from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N, get_speed_error
 from openpilot.selfdrive.car.cruise import V_CRUISE_MAX, V_CRUISE_UNSET
 from openpilot.common.swaglog import cloudlog
+from openpilot.selfdrive.controls.lib.sunnypilot.dynamic_experimental_controller import DynamicExperimentalController
 
 LON_MPC_STEP = 0.2  # first step is 0.2s
 A_CRUISE_MIN = -1.2
@@ -84,6 +85,7 @@ class LongitudinalPlanner:
     self.a_desired_trajectory = np.zeros(CONTROL_N)
     self.j_desired_trajectory = np.zeros(CONTROL_N)
     self.solverExecutionTime = 0.0
+    self.dynamic_experimental_controller = DynamicExperimentalController()
 
   @staticmethod
   def parse_model(model_msg, model_error):
@@ -106,6 +108,13 @@ class LongitudinalPlanner:
     return x, v, a, j, throttle_prob
 
   def update(self, sm):
+    if sm['controlsState'].experimentalMode:
+      self.dynamic_experimental_controller.update(sm['carState'], sm['radarState'].leadOne, sm['modelV2'])
+      self.mpc.mode = self.dynamic_experimental_controller.get_mpc_mode()
+    else:
+      self.mpc.mode = 'blended' if sm['controlsState'].experimentalMode else 'acc'
+
+    
     self.mpc.mode = 'blended' if sm['selfdriveState'].experimentalMode else 'acc'
 
     if len(sm['carControl'].orientationNED) == 3:
